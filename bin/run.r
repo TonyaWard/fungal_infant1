@@ -22,6 +22,10 @@ source("bin/Figure.2.r") #done
 
 source("bin/Figure.3.r") #done
 
+source("bin/oral.supp.vc.r")  #done
+
+source("bin/anal.supp.vc.r")  #done
+
 source("bin/Supplemental_anal.r")  #done
 
 source("bin/taxa_otu_counts.r") #done
