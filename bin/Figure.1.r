@@ -49,7 +49,7 @@ body_PCOA <- ggplot(PCOA) +
 
 #Make boxplot of PCs
 PC1_boxes <- ggplot(PCOA) +
-  geom_boxplot(aes_string(x = "SuperbodysiteOralSkinNoseVaginaAnalsAureola", y = "PC1", fill = "SuperbodysiteOralSkinNoseVaginaAnalsAureola")) + 
+  geom_boxplot(aes_string(x = factor(PCOA$SuperbodysiteOralSkinNoseVaginaAnalsAureola, levels=c("Anal", "Oral", "Skin")), y = "PC1", fill = "SuperbodysiteOralSkinNoseVaginaAnalsAureola")) + 
   scale_fill_manual(values=body_cols2) +
   theme_cowplot(font_size = 7) +
   guides(fill=F)+
@@ -58,7 +58,7 @@ PC1_boxes <- ggplot(PCOA) +
 
 
 PC2_boxes <- ggplot(PCOA) +
-  geom_boxplot(aes_string(x =factor(PCOA$SuperbodysiteOralSkinNoseVaginaAnalsAureola, levels=c("Skin", "Oral", "Anal")), y = "PC2", fill = "SuperbodysiteOralSkinNoseVaginaAnalsAureola")) + 
+  geom_boxplot(aes_string(x =factor(PCOA$SuperbodysiteOralSkinNoseVaginaAnalsAureola, levels=c("Anal", "Oral", "Skin")), y = "PC2", fill = "SuperbodysiteOralSkinNoseVaginaAnalsAureola")) + 
   scale_fill_manual(values=body_cols2) +
   theme_cowplot(font_size = 7) +
   guides(fill=F) +

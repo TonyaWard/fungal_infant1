@@ -150,22 +150,22 @@ for(a in 1:length(alpha_metrics)){
     max_a <- max(alpha_table_baby[,alpha_use])
     figure <- ggplot(working_alpha, aes(x=Collection_Day, y=value, color=Delivery_Vvaginal_Ccs_IcsInoc, group=Delivery_Vvaginal_Ccs_IcsInoc)) +
       geom_jitter(width = 0.25, size=4, alpha=0.65) +
-      geom_smooth(se=FALSE) +
+      geom_smooth(method=lm, linetype = "dashed", se=FALSE) +
       scale_color_manual(values=c("#c3c823", "#053d58")) +
       theme(legend.title=element_blank()) +
-      labs(x="Day", y=alpha_metric ) +
+      labs(x="Day", y=alpha_use) +
       expand_limits(y=c(min_a,max_a))
     name <- names(alpha_tissues[t])
     alpha_plots[[name]] <- figure
   }
   plot3 <- plot_grid(alpha_plots[[1]], alpha_plots[[2]], alpha_plots[[3]],
-                     labels=c(names(alpha_plots)),hjust=-2, ncol=3)
+                     labels=c(names(alpha_plots)), nrow=3)
   alpha_name <- paste("alpha_time_", alpha_use, ".pdf", sep='')
   plot_this <- paste(main_fp, "alpha_div/vc_time", alpha_name, sep='/')
   save_plot(plot_this, plot3,
-            ncol = 3,
-            nrow = 1,
-            base_aspect_ratio = 1.8)
+            ncol = 1,
+            nrow = 3,
+            base_aspect_ratio = 1.2)
 }
 
 ######################################################################
@@ -307,6 +307,8 @@ alpha_dir <- paste(main_fp, "alpha_div/Baby_VC/", sep='/')
 for(i in 1:length(alpha_metrics)){
   alpha_use <- alpha_metrics[i]
   plot_list <- c()
+  min_val <- min(alpha_table_baby[,alpha_use])
+  max_val <- max(alpha_table_baby[,alpha_use])
   for(b in 1:length(Bodysites_B)){
     alpha_working <- alpha_table_baby[Bodysites_B[[b]],]
     alpha_plot1 <- ggplot(alpha_working, aes_string(x="Delivery_Vvaginal_Ccs_IcsInoc", y=alpha_use, fill="Delivery_Vvaginal_Ccs_IcsInoc")) +

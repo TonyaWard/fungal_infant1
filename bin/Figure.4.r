@@ -1,6 +1,109 @@
-##Making Figure 4
 #separation by birth mode
 #distance to mom by c-section or vaginal
+
+######################################################################
+#plot skin samples according to birth mode
+###
+beta_table <- wunifrac
+body_samples <- Bodysites_B[[1]]
+body_samples <- intersect(body_samples, earlies)
+beta_subset <- beta_table[body_samples,body_samples]
+PCOA <- pcoa(beta_subset)$vectors
+
+beta_dist = as.dist(beta_subset)
+map2 <- mapping[body_samples,]
+ad = adonis(beta_dist ~ map2[,"Delivery_Vvaginal_Ccs_IcsInoc"], data=map2, permutations=999)
+p_val <- ad$aov.tab[1,6]
+r_sq <- ad$aov.tab[1,5]
+#Run Stats for diff. dispersion
+
+
+for(i in 1:ncol(PCOA)){
+  colnames(PCOA)[i] <- paste("PC",i, sep="")
+}
+PCOA <- cbind(PCOA, rownames(PCOA))
+colnames(PCOA)[ncol(PCOA)] <- "SampleID"
+mapping2 <- mapping
+mapping2 <- data.frame(lapply(mapping2, as.character), stringsAsFactors=FALSE)
+PCOA <- merge(PCOA, mapping2, by="SampleID")
+PCOA$PC1 <- as.numeric(levels(PCOA$PC1))[PCOA$PC1]
+PCOA$PC2 <- as.numeric(levels(PCOA$PC2))[PCOA$PC2]
+PCOA$PC3 <- as.numeric(levels(PCOA$PC3))[PCOA$PC3]
+PCOA$PC4 <- as.numeric(levels(PCOA$PC4))[PCOA$PC4]
+plot(PCOA$PC2, PCOA$PC3)
+plot1 <- ggplot(PCOA) +
+    geom_point(size = 4, alpha=0.65, aes_string(x = "PC1", y = "PC2", color = "Delivery_Vvaginal_Ccs_IcsInoc")) + 
+    scale_color_manual(values=c("#c3c823", "#053d58")) +
+    theme_cowplot(font_size = 7) +
+    #guides(color=guide_legend(nrow=3)) +
+    guides(color=F)  +
+    theme(legend.title=element_blank()) +
+    labs(x=" ", y=" ") +
+    theme(axis.text.x = element_text(color=NA), axis.text.y = element_text(color=NA))
+
+#Make box plots for sides
+#Make boxplot of PCs
+PC1_boxes <- ggplot(PCOA) +
+  geom_boxplot(aes_string(x = "Delivery_Vvaginal_Ccs_IcsInoc", y = "PC2", fill = "Delivery_Vvaginal_Ccs_IcsInoc")) + 
+  scale_fill_manual(values=c("#c3c823", "#053d58")) +
+  theme_cowplot(font_size = 7) +
+  guides(fill=F)+
+  coord_flip() +
+  labs(x=" ")
+
+PC2_boxes <- ggplot(PCOA) +
+  geom_boxplot(aes_string(x ="Delivery_Vvaginal_Ccs_IcsInoc", y = "PC1", fill = "Delivery_Vvaginal_Ccs_IcsInoc")) + 
+  scale_fill_manual(values=c("#c3c823", "#053d58")) +
+  theme_cowplot(font_size = 7) +
+  guides(fill=F) +
+  labs(x =" ") +
+  theme(axis.text.x = element_text(color=NA))
+
+#########WORKING HERE
+
+top2 <- plot_grid(PC2_boxes, plot1, ncol=2, rel_widths=c(0.3, 1))
+bottom2 <- plot_grid(NULL, PC1_boxes, ncol=2, rel_widths=c(0.3, 1))
+together2 <- plot_grid(top2, bottom2, nrow=2, rel_heights=c(1, 0.3))
+
+
+
+for(i in 1:nrow(taxa_table)){
+  header <- rownames(taxa_table)[[i]]
+  color_by <- gsub(" ", "_", header)
+  print(header)
+  if(mean(as.numeric(PCOA[,color_by])) > 0.001){
+    test_cor1 <- cor.test(PCOA[,"PC3"], as.numeric(PCOA[,color_by]), method="spearman")
+    if(! is.na(test_cor1$p.value) & test_cor1$p.value < 0.05){
+      plot1 <- ggplot(PCOA) +
+        geom_point(size = 4, alpha=0.65, aes_string(x = "PC2", y = "PC3", color = color_by)) +
+        theme_bw() +
+        theme(panel.background = element_blank(),
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              plot.title = element_text(size = 10),
+              legend.title = element_blank(),
+              legend.key.size = unit(0.2, "in"),
+              legend.text = element_text(size=5),
+              legend.position = 'bottom',
+              axis.text = element_text(size=5),
+              axis.title = element_text(size=8)) +
+        scale_color_manual(values=cols_grad2(length(unique(PCOA[,color_by])))) +
+        guides(color=guide_legend(nrow=3))
+      name1 <- paste(color_by, "1", ".pdf", sep="")
+      #fp <- paste(pcoa_dir_baby, name1, sep="")
+      pdf(name1, height=4,width=6)
+      print(plot1)
+      dev.off()
+    }
+  }
+}
+
+
+
+
+
+
+
 
 ######################################################################
 #PCoA of mom's Vaginal Samples & Baby Skin, by birth mode
@@ -74,6 +177,9 @@ current_plot <- ggplot() + #plot with lines
 
 beta_div <- wunifrac
 
+firsts <- c(Days[['1']], Days[['3']])
+early_babies <- intersect(firsts, babies)
+
 mom <- Vagina
 site <- Skin
 dist_plots <- c()
@@ -83,6 +189,7 @@ for(i in 1:length(Families)){
   mom_v <- intersect(Families[[i]], mom)
   if(length(mom_v) > 0){
     babies_working <- intersect(Families[[i]], site)
+    babies_working <- intersect(babies_working, firsts)
     if(length(babies_working) > 0){
       for(a in 1:length(babies_working)){
         working_sample <- babies_working[[a]]

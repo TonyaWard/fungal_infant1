@@ -3,8 +3,7 @@ beta_tables <- list(bray,unifrac,wunifrac)
 beta_metrics <- c("bray_curtis", "unifrac", "weight_unifrac")
 
 ######################################################################
-#Make PCoAs of Early and Late, color by birth mode
-#Also make one of all the babies, color by birth mode
+#Make PCoAs of body site
 pcoa_dir_baby <- paste(main_fp, "beta_div/PCOA_bodysite/", sep='/')
 early_babies <- intersect(babies, earlies)
 late_babies <- intersect(babies, lates)
@@ -116,7 +115,6 @@ for(b in 1:length(beta_tables)){
 }
 
 ### Do the same but don't separate by early late
-
 for(b in 1:length(beta_tables)){
   beta_table <- beta_tables[[b]]
   beta_name <- beta_metrics[b]
@@ -317,8 +315,12 @@ pcoa_dir_baby <- paste(main_fp, "beta_div/PCOA_baby_all_cats/", sep='/')
     }
   }
 #}
-
-
+#print color range:
+cols_grad2
+fp <- paste(pcoa_dir_baby, "color_scale.pdf", sep="")
+pdf(fp, height=2, width=4, useDingbats = F)
+plot(rep(0,10),col=cols_grad2(10),pch=19,cex=3)
+dev.off()
 ######################################################################
 ##Plot each bodysite separate, with mom_v added in. Baby=circle, mom=triangle
 

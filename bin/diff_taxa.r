@@ -54,15 +54,18 @@ for(i in 1:length(Bodysites_B)){
             #    qval <- difftest$qvalues[k]
             #  } else {
             #    
-              qval <- difftest$qvalues[k]
-              #taxon <- taxonomy[names(signif.ix)[k], "taxonomy7"]
+              
+              taxon <- names(signif.ix)[k]
+              qval <- difftest$qvalues[[taxon]]
+              pval <- difftest$pvalues[[taxon]]
               #name <- paste(names(Bodysite), names(Day), names(test.x), names(test.y), taxon, sep="-")
               name <- paste(names(Bodysite), names(Day), names(test.x), names(test.y), names(signif.ix)[k], sep="-")
               fp_name <- paste(diff_dir, name, sep="/")
               
               #Stats output  
               sink(paste(fp_name, "txt", sep="."))
-              cat(paste('q=',qval,' taxon: ',names(signif.ix)[k],'\n',sep=''))
+              cat(paste('q=',qval,' taxon: ',taxon,'\n',sep=''))
+              cat(paste('p=',pval,' taxon: ',taxon,'\n',sep=''))
               sink()
               
               #boxplots
@@ -91,7 +94,81 @@ for(i in 1:length(Bodysites_B)){
   }
 }
 
-
+######################################################################
+#don't control for Day, test VC
+#For each bodysite and and timepoint run tests
+for(i in 1:length(Bodysites_B)){
+  Bodysite <- Bodysites_B[i]
+  union1 <- Bodysite[[1]]
+    for(n in 1:(length(test.ixs)-1)){
+      for(m in (n+1):length(test.ixs)){
+        test.x <- test.ixs[n]
+        test.y <- test.ixs[m]
+        set1 <- intersect(union1, test.x[[1]])
+        set2 <- intersect(union1, test.y[[1]])
+        if(length(set1) > 2 && length(set2) > 2){
+          full_set <- c(set1, set2)
+          #keep vaginal taxa and the samples you are testing
+          test_table <- t(taxa_table[rownames(v_taxa),full_set,drop=F])
+          #Keep taxa that have at least one count
+          test_table <- test_table[,colSums(test_table)>0, drop=F]
+          map_test <- mapping[full_set,]
+          map_test$Delivery_Vvaginal_Ccs_IcsInoc <- factor(map_test$Delivery_Vvaginal_Ccs_IcsInoc)
+          
+          #difftest <- differentiation.test(test_table, map_test$Delivery_Vvaginal_Ccs_IcsInoc, parametric=TRUE)
+          difftest <- differentiation.test(test_table, map_test$Delivery_Vvaginal_Ccs_IcsInoc, parametric=FALSE)
+          
+          if(any(difftest$qvalues <= ALPHA)){
+            signif.ix <- which(difftest$qvalues <= ALPHA)
+            signif.ix <- signif.ix[order(difftest$pvalues[signif.ix])]
+            for(k in 1:length(signif.ix)){
+              #  if(!is.null(difftest$norm.test.pvals)){
+              #    norm.test <- difftest$norm.test.pvals[k]
+              #  } else {
+              #    norm.test <- '0'
+              #  }
+              #  if(norm.test < 0.05){
+              #    qval <- difftest$qvalues[k]
+              #  } else {
+              #    
+              
+              taxon <- names(signif.ix)[k]
+              qval <- difftest$qvalues[[taxon]]
+              pval <- difftest$pvalues[[taxon]]
+              #name <- paste(names(Bodysite), names(Day), names(test.x), names(test.y), taxon, sep="-")
+              name <- paste(names(Bodysite), names(test.x), names(test.y), names(signif.ix)[k], sep="-")
+              fp_name <- paste(diff_dir, name, sep="/")
+              
+              #Stats output  
+              sink(paste(fp_name, "txt", sep="."))
+              cat(paste('q=',qval,' taxon: ',taxon,'\n',sep=''))
+              cat(paste('p=',pval,' taxon: ',taxon,'\n',sep=''))
+              sink()
+              
+              #boxplots
+              test_table <- as.data.frame(test_table)
+              plot1 <- ggplot(test_table, aes(y=test_table[,names(signif.ix)[k]], x=map_test$Delivery_Vvaginal_Ccs_IcsInoc, fill=map_test$Delivery_Vvaginal_Ccs_IcsInoc)) +
+                geom_boxplot(outlier.shape = NA) +
+                geom_jitter(position=position_jitter(0.1), shape=1, size=3) +
+                guides(fill=FALSE) +
+                labs(x="", y = "Relative Abundance") +
+                scale_fill_manual(values=c("#c3c823", "#053d58"))
+              
+              save_plot(paste(fp_name, "pdf", sep="."),plot1)
+              #boxplot(test_table[,names(signif.ix)[k]] ~ map_test$Delivery_Vvaginal_Ccs_IcsInoc, 
+              #        xlab='', ylab="Relative Abundance", main=name,
+              #        col=c("#c3c823", "#053d58"))
+              #dev.off()
+            }
+          } else {
+            cat("not significant.")
+          }
+        } else {
+          cat("Less than two samples in one group, skipping this test.")
+        }
+      }
+    }
+}
 
 ##### Test bodysite in general ##########
 ###Test mom's sites####
@@ -107,35 +184,39 @@ test_table <- test_table[rowSums(test_table > 0 )/ncol(test_table) > 0.1, ]
 test_table <- t(test_table)
 map_test <- mapping[mom,]
 
-#difftest <- differentiation.test(test_table, map_test$Delivery_Vvaginal_Ccs_IcsInoc, parametric=TRUE)
+difftest <- differentiation.test(test_table, map_test$Delivery_Vvaginal_Ccs_IcsInoc, parametric=TRUE)
 difftest <- differentiation.test(test_table, map_test$SuperbodysiteOralSkinNoseVaginaAnalsAureola, parametric=FALSE)
 
-if(any(difftest$pvalues <= ALPHA)){
-  signif.ix <- which(difftest$pvalues <= ALPHA)
+if(any(difftest$qvalues <= ALPHA)){
+  signif.ix <- which(difftest$qvalues <= ALPHA)
   signif.ix <- signif.ix[order(difftest$pvalues[signif.ix])]
-  for(k in 1:length(signif.ix)){
-    #  if(!is.null(difftest$norm.test.pvals)){
-    #    norm.test <- difftest$norm.test.pvals[k]
-    #  } else {
-    #    norm.test <- '0'
-    #  }
-    #  if(norm.test < 0.05){
-    #    qval <- difftest$qvalues[k]
-    #  } else {
-    #    
-    qval <- difftest$qvalues[k]
-    pval <- difftest$pvalues[k]
-    name <- paste("mom_V_A", names(signif.ix)[k], sep="-")
-    fp_name <- paste(diff_dir, name, sep="/")
+  for(k in signif.ix){
+      if(!is.null(difftest$norm.test.pvals)){
+        norm.test <- difftest$norm.test.pvals[k]
+      } else {
+        norm.test <- '0'
+      }
+      if(norm.test < 0.05){
+        qval <- difftest.np$qvalues[k]
+        pval <- difftest.np$pvalues[k]
+      } else {
+        qval <- difftest$qvalues[k]
+        pval <- difftest$pvalues[k]
+      }
+      taxon <- names(signif.ix)[k]
+      #qval <- difftest$qvalues[[taxon]]
+      pval <- difftest$pvalues[[taxon]]
+      name <- paste("mom_V_A", names(signif.ix)[k], sep="-")
+      fp_name <- paste(diff_dir, name, sep="/")
     
-    #Stats output  
-    sink(paste(fp_name, "txt", sep="."))
-    cat(paste('q=',qval,'p=', pval , 'taxon: ',names(signif.ix)[k],'\n',sep=''))
-    sink()
+      #Stats output  
+      sink(paste(fp_name, "txt", sep="."))
+      cat(paste('q=',qval,'p=', pval , 'taxon: ',taxon,'\n',sep=''))
+      sink()
     
-    #boxplots
-    test_table <- as.data.frame(test_table)
-    plot1 <- ggplot(test_table, aes(y=test_table[,names(signif.ix)[k]], x=map_test$SuperbodysiteOralSkinNoseVaginaAnalsAureola, fill=map_test$SuperbodysiteOralSkinNoseVaginaAnalsAureola)) +
+      #boxplots
+      test_table <- as.data.frame(test_table)
+      plot1 <- ggplot(test_table, aes(y=test_table[,names(signif.ix)[k]], x=map_test$SuperbodysiteOralSkinNoseVaginaAnalsAureola, fill=map_test$SuperbodysiteOralSkinNoseVaginaAnalsAureola)) +
       geom_boxplot(outlier.shape = NA) +
       geom_jitter(position=position_jitter(0.1), shape=1, size=3) +
       guides(fill=FALSE) +
@@ -143,11 +224,13 @@ if(any(difftest$pvalues <= ALPHA)){
       scale_fill_manual(values=c("#b75f6d", "#99897e"))
     
     save_plot(paste(fp_name, "pdf", sep="."),plot1)
-  }
+    }
 } else {
   cat("No differentiated taxa for mom")
 }
 
+
+  
 
 ###Test Baby Sites, control for Day####
 diff_dir <- paste(main_fp, "diff_taxa/Body_Sites/", sep='/')
@@ -193,14 +276,17 @@ for(i in 1:length(Infant)){
               #    qval <- difftest$qvalues[k]
               #  } else {
               #    
-              qval <- difftest$qvalues[k]
+              taxon <- names(signif.ix)[k]
+              qval <- difftest$qvalues[[taxon]]
+              pval <- difftest$pvalues[[taxon]]
               name <- paste(names(Day), names(test.x), names(test.y), names(signif.ix)[k], sep="-")
               fp_name <- paste(diff_dir, name, sep="/")
               file_name <- paste(fp_name, ".txt", sep="")
               
               #Stats output  
               sink(file = file_name)
-              cat(paste('q=',qval,' taxon: ',names(signif.ix)[k],'\n',sep=''))
+              cat(paste('q=',qval,' taxon: ',taxon,'\n',sep=''))
+              cat(paste('p=',pval,' taxon: ',taxon,'\n',sep=''))
               sink()
               
               #boxplots
@@ -224,8 +310,7 @@ for(i in 1:length(Infant)){
           
 ###Don't control for day #####
 
-###Test Baby Sites, control for Day####
-
+###Test Baby Sites####
 diff_dir <- paste(main_fp, "diff_taxa/Body_Sites_gen/", sep='/')
 
 test.ixs <- Bodysites_B
@@ -252,14 +337,17 @@ if(any(difftest$qvalues <= ALPHA)){
     #    qval <- difftest$qvalues[k]
     #  } else {
     #    
-    qval <- difftest$qvalues[k]
+    taxon <- names(signif.ix)[k]
+    qval <- difftest$qvalues[[taxon]]
+    pval <- difftest$pvalues[[taxon]]
     name <- names(signif.ix)[k]
     fp_name <- paste(diff_dir, name, sep="/")
     file_name <- paste(fp_name, ".txt", sep="")
     
     #Stats output  
     sink(file = file_name)
-    cat(paste('q=',qval,' taxon: ',names(signif.ix)[k],'\n',sep=''))
+    cat(paste('q=',qval,' taxon: ',taxon,'\n',sep=''))
+    cat(paste('p=',pval,' taxon: ',taxon,'\n',sep=''))
     sink()
     working_table <- t(test_table)
     #boxplots
@@ -314,14 +402,17 @@ for(i in 1:length(Infant)){
               #    qval <- difftest$qvalues[k]
               #  } else {
               #    
-              qval <- difftest$qvalues[k]
+              taxon <- names(signif.ix)[k]
+              qval <- difftest$qvalues[[taxon]]
+              pval <- difftest$pvalues[[taxon]]
               name <- paste(names(test.x), names(test.y), names(signif.ix)[k], sep="-")
               fp_name <- paste(diff_dir, name, sep="/")
               file_name <- paste(fp_name, ".txt", sep="")
               
               #Stats output  
               sink(file = file_name)
-              cat(paste('q=',qval,' taxon: ',names(signif.ix)[k],'\n',sep=''))
+              cat(paste('q=',qval,' taxon: ',taxon,'\n',sep=''))
+              cat(paste('p=',pval,' taxon: ',taxon,'\n',sep=''))
               sink()
               
               #boxplots

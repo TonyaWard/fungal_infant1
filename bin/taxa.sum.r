@@ -278,6 +278,7 @@ neg_control <- neg_control[neg_control$Count > 0,]
 neg_control <- neg_control[order(neg_control$Count, decreasing=TRUE),]
 neg_control$Taxa <- factor(neg_control$Taxa, levels=neg_control$Taxa)
 
+taxa_cols2 <- sample(cols2(length(rownames(neg_control))))
 con_plot <- ggplot(neg_control, aes_string(x = "Taxa", y = "Count", fill="Taxa")) + 
   geom_bar(stat="identity") +
   guides(fill=guide_legend(ncol=3)) +
@@ -292,3 +293,29 @@ pdf(file_path, height=4,width=6)
 print(con_plot)
 dev.off()
 
+
+####Control (pos) taxa summary###
+
+taxa_dir <- paste(main_fp, "taxa_sum/", sep='/')
+pos_control <- t(control_taxa)
+pos_control <- pos_control[2,, drop=FALSE]
+pos_control <- melt(pos_control)
+names(pos_control) <- c("SampleID", "Taxa", "Count")
+pos_control <- pos_control[pos_control$Count > 0,]
+pos_control <- pos_control[order(pos_control$Count, decreasing=TRUE),]
+pos_control$Taxa <- factor(pos_control$Taxa, levels=pos_control$Taxa)
+
+taxa_cols2 <- sample(cols2(length(rownames(pos_control))))
+con_plot <- ggplot(pos_control, aes_string(x = "Taxa", y = "Count", fill="Taxa")) + 
+  geom_bar(stat="identity") +
+  guides(fill=guide_legend(ncol=3)) +
+  scale_fill_manual(name= names(taxa_cols), values= taxa_cols)+
+  labs(y="Normalized Counts", x='')+
+  theme(axis.text.x = element_blank(), legend.position = 'bottom', legend.title=element_blank())
+
+#assign pdf name for plot
+name <- "pos_control.pdf"
+file_path <- paste(taxa_dir, name, sep='')
+pdf(file_path, height=4,width=6)
+print(con_plot)
+dev.off()

@@ -3,7 +3,7 @@
 #set output dir
 taxa_dir <- paste(main_fp, "taxa_time/", sep='/')
 
-ALPHA <- 0.5
+ALPHA <- 0.25
 kids <- c(Bodysites_B[[1]], Bodysites_B[[2]], Bodysites_B[[3]])
 test_table <- taxa_table[, kids]
 test_table <- test_table[rowSums(test_table) > 0,] #take out 3 taxa
