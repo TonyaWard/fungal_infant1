@@ -21,7 +21,7 @@ make_taxa_sums <- function(taxa_table, subset_test){
   #if less than 8%, set to 0 and change name to other
   for(i in 1:ncol(subset_otu)){
     for(k in 1:nrow(subset_otu)){
-      if(subset_otu[k,i] < 0.08){
+      if(subset_otu[k,i] < 0.20){
         subset_otu[k,i] <- 0
       }
     }

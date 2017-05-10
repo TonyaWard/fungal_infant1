@@ -29,3 +29,5 @@ source("bin/anal.supp.vc.r")  #done
 source("bin/Supplemental_anal.r")  #done
 
 source("bin/taxa_otu_counts.r") #done
+
+source("bin/sample.tables.r") #done

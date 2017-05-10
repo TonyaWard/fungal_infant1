@@ -292,7 +292,7 @@ dev.off()
                         function(ixx) if(length(ixx) < 3) 0 else cor.test(alpha[ixx], time[ixx], method='spear')$statistic))
     mc.stats1 <- -replicate(999,mean(sapply(split(1:nrow(working_alpha1), subject), 
                                            function(ixx) if(length(ixx) < 3) 0 else cor.test(alpha[ixx], sample(time[ixx]), method='spear')$statistic)))
-    pval1 <- mean(c(obs,mc.stats1) >= obs)
+    pval1 <- mean(c(obs1,mc.stats1) >= obs1)
     
     working_alpha2 <- working_alpha[working_alpha$Delivery_Vvaginal_Ccs_IcsInoc =="C",]
     alpha <- working_alpha2$value
@@ -302,7 +302,7 @@ dev.off()
                          function(ixx) if(length(ixx) < 3) 0 else cor.test(alpha[ixx], time[ixx], method='spear')$statistic))
     mc.stats2 <- -replicate(999,mean(sapply(split(1:nrow(working_alpha2), subject), 
                                             function(ixx) if(length(ixx) < 3) 0 else cor.test(alpha[ixx], sample(time[ixx]), method='spear')$statistic)))
-    pval2 <- mean(c(obs,mc.stats2) >= obs)
+    pval2 <- mean(c(obs2,mc.stats2) >= obs2)
     
     
     figure <- ggplot(working_alpha, aes(x=Collection_Day, y=value, color=Delivery_Vvaginal_Ccs_IcsInoc, group=Delivery_Vvaginal_Ccs_IcsInoc)) +

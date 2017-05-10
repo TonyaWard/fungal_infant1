@@ -33,7 +33,7 @@ subset_otu <- as.data.frame(t(subset_otu))
 #if less than 5%, set to 0 and change name to other
 for(i in 1:ncol(subset_otu)){
   for(k in 1:nrow(subset_otu)){
-    if(subset_otu[k,i] < 0.05){
+    if(subset_otu[k,i] < 0.15){
       subset_otu[k,i] <- 0
     }
   }

@@ -98,6 +98,21 @@ legend <- ggplot(otu, aes_string(x = "SampleID", y = "Relative_Abundance", fill=
   theme(legend.title = element_blank())
 g <- ggplotGrob(legend)$grobs
 legend2 <- g[[which(sapply(g, function(x) x$name) == "guide-box")]]
+######################################################################
+#Alpha Div by body site 
+
+working_table <- rbind(alpha_skin, alpha_anal)
+working_table <- rbind(alpha_oral, working_table)
+working_table$SuperbodysiteOralSkinNoseVaginaAnalsAureola <- factor(working_table$SuperbodysiteOralSkinNoseVaginaAnalsAureola, levels=c("Skin", "Oral", "Anal"))
+
+body_plot <- ggplot(working_table, aes_string(x="SuperbodysiteOralSkinNoseVaginaAnalsAureola", y="observed_species", fill="SuperbodysiteOralSkinNoseVaginaAnalsAureola")) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(position=position_jitter(0.1), shape=1, size=1) +
+  theme(legend.position = 'bottom') + 
+  theme_cowplot(font_size = 7) +
+  labs(x="") +
+  guides(fill=F) +
+  scale_fill_manual(values=body_cols)
 
 ######################################################################
 #Compile Figure 1
@@ -108,10 +123,12 @@ fig1 <- ggdraw() +
   draw_plot(PC2_boxes, 0, 0.7, 0.12, 0.3) +
   draw_plot(PC1_boxes, 0.08, 0.6, 0.3, 0.12)+
   draw_plot(body_PCOA, 0.08, 0.7, 0.3,0.3) +
+  draw_plot(body_plot, 0.40, 0.75, 0.60, 0.2) +
   draw_plot(taxa_plot, 0, 0, 1, 0.6) +
   draw_plot_label(c("a", "b"), c(0, 0), c(1, 0.6), size = 15)
 
-top <- plot_grid(together2, NULL, ncol=2, rel_widths = c(1,1))
+top <- plot_grid(together2, body_plot, NULL, ncol=3, rel_widths = c(0.33,0.33,0.33))
+
 together <- plot_grid(top, taxa_plot, nrow=2, rel_heights = c(1,1), labels="auto", label_size = 12)
 
 pdf(paste(main_fp, "/Figure1.pdf", sep=""), width=6.69, height=6)

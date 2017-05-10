@@ -3,7 +3,7 @@ alpha <- alpha[rownames(mapping),]
 mapping$shannon <- alpha$shannon
 mapping$observed_species <- alpha$observed_species
 mapping$simpson <- alpha$simpson
-mapping$PDwholetree <- alpha$PD_whole_tree
+mapping$PDwholetree <- alpha$PD
 alpha_metrics <- c("shannon", "observed_species", "simpson", "PDwholetree")
 
 alpha_oral <- mapping[Bodysites_B[["Oral"]],]
@@ -11,6 +11,42 @@ alpha_skin <- mapping[Bodysites_B[["Skin"]],]
 alpha_anal <- mapping[Bodysites_B[["Anal_B"]],]
 alpha_tissues <- list(alpha_skin, alpha_oral, alpha_anal)
 names(alpha_tissues) <- c("Skin", "Oral", "Anal")
+
+######################################################################
+#Use all timepoints across baby sites
+working_table <- rbind(alpha_skin, alpha_anal)
+working_table <- rbind(alpha_oral, working_table)
+working_table$SuperbodysiteOralSkinNoseVaginaAnalsAureola <- factor(working_table$SuperbodysiteOralSkinNoseVaginaAnalsAureola, levels=c("Skin", "Oral", "Anal"))
+
+body_plot <- ggplot(working_table, aes_string(x="SuperbodysiteOralSkinNoseVaginaAnalsAureola", y="observed_species", fill="SuperbodysiteOralSkinNoseVaginaAnalsAureola")) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(position=position_jitter(0.1), shape=1, size=3) +
+  theme(legend.position = 'bottom') + 
+  labs(x="Body Site") +
+  guides(fill=F) +
+  scale_fill_manual(values=body_cols)
+
+test_this <- aov(working_table$observed_species ~ working_table$SuperbodysiteOralSkinNoseVaginaAnalsAureola)
+a_s <- rbind(alpha_anal, alpha_skin)
+a_o <- rbind(alpha_anal, alpha_oral)
+s_o <- rbind(alpha_skin, alpha_oral)
+anal_skin <- t.test(a_s$observed_species~a_s$SuperbodysiteOralSkinNoseVaginaAnalsAureola)$p.value
+anal_oral <- t.test(a_o$observed_species~a_o$SuperbodysiteOralSkinNoseVaginaAnalsAureola)$p.value
+skin_oral <- t.test(s_o$observed_species~s_o$SuperbodysiteOralSkinNoseVaginaAnalsAureola)$p.value
+
+
+alpha_dir <- paste(main_fp, "alpha_div/Baby_Sites/", sep='/')
+file_name <- paste(alpha_dir, "BodysitesTOTAL_Alpha_Stats.txt", sep='')
+sink(file_name)
+print("Observed Species:")
+print(summary(test_this))
+print("pair-wise (anal_skin, anal_oral, Skin_oral)")
+print(anal_skin)
+print(anal_oral)
+print(skin_oral)
+sink()
+plot_this <- paste(alpha_dir, "Total_Bodysite.pdf", sep="")
+save_plot(plot_this, body_plot)
 
 
 ######################################################################
