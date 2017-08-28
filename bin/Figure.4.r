@@ -1,222 +1,69 @@
-#separation by birth mode
-#distance to mom by c-section or vaginal
-
+## Making Figure 4
 ######################################################################
-#plot skin samples according to birth mode
-###
-beta_table <- wunifrac
-body_samples <- Bodysites_B[[1]]
-body_samples <- intersect(body_samples, earlies)
-beta_subset <- beta_table[body_samples,body_samples]
-PCOA <- pcoa(beta_subset)$vectors
+#Alpha diversity over time
+#Use shannon
 
-beta_dist = as.dist(beta_subset)
-map2 <- mapping[body_samples,]
-ad = adonis(beta_dist ~ map2[,"Delivery_Vvaginal_Ccs_IcsInoc"], data=map2, permutations=999)
-p_val <- ad$aov.tab[1,6]
-r_sq <- ad$aov.tab[1,5]
-#Run Stats for diff. dispersion
+# alpha <- alpha[rownames(mapping),]
+# mapping$shannon <- alpha$shannon
+# mapping$observed_species <- alpha$observed_species
+# mapping$simpson <- alpha$simpson
+# mapping$PDwholetree <- alpha$PD_whole_tree
+alpha_metrics <- c("shannon", "observed_species", "simpson", "PDwholetree")
+
+alpha_oral <- mapping[Bodysites_B[["Oral"]],]
+alpha_skin <- mapping[Bodysites_B[["Skin"]],]
+alpha_anal <- mapping[Bodysites_B[["Anal_B"]],]
+alpha_tissues <- list(alpha_skin, alpha_oral, alpha_anal)
+names(alpha_tissues) <- c("Skin", "Oral", "Anal")
 
 
-for(i in 1:ncol(PCOA)){
-  colnames(PCOA)[i] <- paste("PC",i, sep="")
-}
-PCOA <- cbind(PCOA, rownames(PCOA))
-colnames(PCOA)[ncol(PCOA)] <- "SampleID"
-mapping2 <- mapping
-mapping2 <- data.frame(lapply(mapping2, as.character), stringsAsFactors=FALSE)
-PCOA <- merge(PCOA, mapping2, by="SampleID")
-PCOA$PC1 <- as.numeric(levels(PCOA$PC1))[PCOA$PC1]
-PCOA$PC2 <- as.numeric(levels(PCOA$PC2))[PCOA$PC2]
-PCOA$PC3 <- as.numeric(levels(PCOA$PC3))[PCOA$PC3]
-PCOA$PC4 <- as.numeric(levels(PCOA$PC4))[PCOA$PC4]
-plot(PCOA$PC2, PCOA$PC3)
-plot1 <- ggplot(PCOA) +
-    geom_point(size = 4, alpha=0.65, aes_string(x = "PC1", y = "PC2", color = "Delivery_Vvaginal_Ccs_IcsInoc")) + 
-    scale_color_manual(values=c("#c3c823", "#053d58")) +
+set.seed(68)
+
+scaleFUN <- function(x) sprintf("%.1f", x)
+
+alpha_metric <- "shannon"
+alpha_plots <- c()
+min_a <- min(mapping[,alpha_metric])
+max_a <- max(mapping[,alpha_metric])
+for(t in 1:length(alpha_tissues)){
+  working_alpha <- melt(alpha_tissues[t], id.vars = c('SampleID', 'Delivery_Vvaginal_Ccs_IcsInoc', 'planned_sampling_day_0_1_3_7_14_30_60_90___365', 'subject_id'), measure.vars = c(alpha_metric))
+  working_alpha$Collection_Day <- as.numeric(working_alpha$planned_sampling_day_0_1_3_7_14_30_60_90___365)
+  working_alpha$subject_id <- factor(working_alpha$subject_id)
+  colnames(working_alpha)[6] <- alpha_metric
+  
+  ##linear regression accounting for subject
+  #fm2 <- lme(shannon ~ Collection_Day, data=working_alpha, random= ~ 1 | subject_id)
+  #fm1 <- lme(shannon ~ Collection_Day, data=working_alpha, random= ~ Collection_Day | subject_id)
+  #anova(fm2, fm1) #use fm2 based on anova
+  #r_sq <- fm2$coefficients["fixed"][[1]][[2]]
+  #pval <- data.frame(coef(summary(fm2)))[2,"p.value"]
+  
+  ##Permuation based test to see if different from random
+  # Using a permutation test and a groupwise average of the test statistic of the spearman correlation, we find clinical relevance but not significance.
+  alpha <- working_alpha$shannon
+  subject <- working_alpha$subject_id
+  time <- working_alpha$Collection_Day
+  obs <- -mean(sapply(split(1:nrow(working_alpha), subject), 
+                      function(ixx) if(length(ixx) < 3) 0 else cor.test(alpha[ixx], time[ixx], method='spear')$statistic))
+  mc.stats <- -replicate(999,mean(sapply(split(1:nrow(working_alpha), subject), 
+                                         function(ixx) if(length(ixx) < 3) 0 else cor.test(alpha[ixx], sample(time[ixx]), method='spear')$statistic)))
+  pval <- mean(c(obs,mc.stats) >= obs)
+  
+  figure <- ggplot(working_alpha, aes_string(x="Collection_Day", y=alpha_metric)) +
+    geom_jitter(alpha=0.65, size=1, color=body_cols[t], width = 0.25) +
     theme_cowplot(font_size = 7) +
-    #guides(color=guide_legend(nrow=3)) +
-    guides(color=F)  +
-    theme(legend.title=element_blank()) +
-    labs(x=" ", y=" ") +
-    theme(axis.text.x = element_text(color=NA), axis.text.y = element_text(color=NA))
-
-#Make box plots for sides
-#Make boxplot of PCs
-PC1_boxes <- ggplot(PCOA) +
-  geom_boxplot(aes_string(x = "Delivery_Vvaginal_Ccs_IcsInoc", y = "PC2", fill = "Delivery_Vvaginal_Ccs_IcsInoc")) + 
-  scale_fill_manual(values=c("#c3c823", "#053d58")) +
-  theme_cowplot(font_size = 7) +
-  guides(fill=F)+
-  coord_flip() +
-  labs(x=" ")
-
-PC2_boxes <- ggplot(PCOA) +
-  geom_boxplot(aes_string(x ="Delivery_Vvaginal_Ccs_IcsInoc", y = "PC1", fill = "Delivery_Vvaginal_Ccs_IcsInoc")) + 
-  scale_fill_manual(values=c("#c3c823", "#053d58")) +
-  theme_cowplot(font_size = 7) +
-  guides(fill=F) +
-  labs(x =" ") +
-  theme(axis.text.x = element_text(color=NA))
-
-#########WORKING HERE
-
-top2 <- plot_grid(PC2_boxes, plot1, ncol=2, rel_widths=c(0.3, 1))
-bottom2 <- plot_grid(NULL, PC1_boxes, ncol=2, rel_widths=c(0.3, 1))
-together2 <- plot_grid(top2, bottom2, nrow=2, rel_heights=c(1, 0.3))
-
-
-
-for(i in 1:nrow(taxa_table)){
-  header <- rownames(taxa_table)[[i]]
-  color_by <- gsub(" ", "_", header)
-  print(header)
-  if(mean(as.numeric(PCOA[,color_by])) > 0.001){
-    test_cor1 <- cor.test(PCOA[,"PC3"], as.numeric(PCOA[,color_by]), method="spearman")
-    if(! is.na(test_cor1$p.value) & test_cor1$p.value < 0.05){
-      plot1 <- ggplot(PCOA) +
-        geom_point(size = 4, alpha=0.65, aes_string(x = "PC2", y = "PC3", color = color_by)) +
-        theme_bw() +
-        theme(panel.background = element_blank(),
-              panel.grid.major = element_blank(),
-              panel.grid.minor = element_blank(),
-              plot.title = element_text(size = 10),
-              legend.title = element_blank(),
-              legend.key.size = unit(0.2, "in"),
-              legend.text = element_text(size=5),
-              legend.position = 'bottom',
-              axis.text = element_text(size=5),
-              axis.title = element_text(size=8)) +
-        scale_color_manual(values=cols_grad2(length(unique(PCOA[,color_by])))) +
-        guides(color=guide_legend(nrow=3))
-      name1 <- paste(color_by, "1", ".pdf", sep="")
-      #fp <- paste(pcoa_dir_baby, name1, sep="")
-      pdf(name1, height=4,width=6)
-      print(plot1)
-      dev.off()
-    }
-  }
+    geom_smooth(method=lm, se=FALSE, color="#99897E", linetype = "dashed", size=0.5)+
+    guides(fill=FALSE)+
+    annotate("text", x=25, y=3.25, label= paste("P=", round(pval, digits=3)), size=1) +
+    #annotate("text", x=25, y=3, label= paste("R2=", round(r_sq, digits=3)), size=2) +
+    labs(x="Day", y=alpha_metric )+
+    expand_limits(y=c(min_a,max_a)) +
+    scale_y_continuous(labels=scaleFUN)
+  name <- names(alpha_tissues[t])
+  alpha_plots[[name]] <- figure
 }
+alpha_time <- plot_grid(alpha_plots[[1]], alpha_plots[[2]], alpha_plots[[3]],ncol=3, labels="auto", label_size=12)
 
-
-
-
-
-
-
-
-######################################################################
-#PCoA of mom's Vaginal Samples & Baby Skin, by birth mode
-
-beta_div <- wunifrac
-mom <- Vagina
-baby_site <- Skin
-keeps <- c()
-families_plotted <- c()
-
-for(f in 1:length(Families)){
-  fam_working <- Families[[f]]
-  babies_working <- intersect(fam_working, babies_site)
-  momv <- intersect(fam_working, mom)
-  if(length(babies_working) > 0 & length(momv) > 0){
-    keeps <- c(keeps,babies_working,momv)
-    families_plotted <- c(families_plotted,names(Families)[f])
-  }
-}
-beta_table <-  beta_div[keeps, keeps]
-PCOA <- pcoa(beta_table)$vectors
-for(c in 1:ncol(PCOA)){
-  colnames(PCOA)[c] <- paste("PC",c, sep="")
-}
-PCOA <- cbind(PCOA, rownames(PCOA))
-colnames(PCOA)[ncol(PCOA)] <- "SampleID"
-PCOA <- merge(PCOA, mapping, by="SampleID")
-PCOA$PC1 <- as.numeric(levels(PCOA$PC1))[PCOA$PC1]
-PCOA$PC2 <- as.numeric(levels(PCOA$PC2))[PCOA$PC2]
-
-connections <- data.frame(x1 = NA, y1 = NA, x2 = NA, y2 = NA, familyN=NA)
-for(t in 1:length(families_plotted)){
-  fam_working <- Families[[families_plotted[t]]]
-  momv <- intersect(fam_working, mom)
-  babies_working <- intersect(fam_working, babies_site)
-  for(a in 1:length(babies_working)){
-    baby_now <- babies_working[a]
-    mom_x <- PCOA[PCOA$SampleID==momv,"PC1"]
-    mom_y <- PCOA[PCOA$SampleID==momv,"PC2"]
-    baby_x <- PCOA[PCOA$SampleID==baby_now,"PC1"]
-    baby_y <- PCOA[PCOA$SampleID==baby_now,"PC2"]
-    new_row <- c(mom_x, mom_y, baby_x, baby_y, families_plotted[t])
-    connections <- rbind(connections, new_row)
-  }
-}
-connections <- connections[2:nrow(connections),]
-connections$x1 <- as.numeric(connections$x1)
-connections$x2 <- as.numeric(connections$x2)
-connections$y1 <- as.numeric(connections$y1)
-connections$y2 <- as.numeric(connections$y2)
-v_list <- c()
-for(v in 1:length(connections$familyN)){
-  working_row <- which(mapping$familyN == connections$familyN[v])[[1]]
-  v_list <- c(v_list, mapping[working_row,"Delivery_Vvaginal_Ccs_IcsInoc"])
-}
-connections$DelMode <- v_list
-
-current_plot <- ggplot() + #plot with lines
-  geom_point(data=PCOA,size = 2, alpha=0.65, aes_string(x = "PC1", y = "PC2", color = "Delivery_Vvaginal_Ccs_IcsInoc", shape = "motherorbaby_M_B")) + 
-  scale_color_manual(values=c("#c3c823", "#053d58")) +
-  theme_cowplot(font_size=7) +
-  geom_segment(data=connections,aes(x=x1, y=y1, xend=x2, yend=y2, color=DelMode), alpha=0.65)+
-  guides(color=FALSE) +
-  guides(shape=FALSE) +
-  theme(legend.title = element_blank())
-
-
-######################################################################
-#Average distance to mom's Vaginal Samples to Skin, by birth mode
-#Use weighted unifrac
-
-beta_div <- wunifrac
-
-firsts <- c(Days[['1']], Days[['3']])
-early_babies <- intersect(firsts, babies)
-
-mom <- Vagina
-site <- Skin
-dist_plots <- c()
-v_distances <- t(as.data.frame(c("SampleID", "Distance_MomV")))
-v_distances <- ddf <- data.frame(matrix(ncol = 2, nrow = 1))
-for(i in 1:length(Families)){
-  mom_v <- intersect(Families[[i]], mom)
-  if(length(mom_v) > 0){
-    babies_working <- intersect(Families[[i]], site)
-    babies_working <- intersect(babies_working, firsts)
-    if(length(babies_working) > 0){
-      for(a in 1:length(babies_working)){
-        working_sample <- babies_working[[a]]
-        new_row <- c(working_sample, beta_div[working_sample,mom_v])
-        v_distances <- rbind(v_distances, new_row)
-      }
-    }
-  }
-}
-
-
-colnames(v_distances) <- c("SampleID", "Distance_MomV")
-v_distances <- merge(v_distances, mapping, by="SampleID")
-v_distances$Distance_MomV <- as.numeric(as.character(v_distances$Distance_MomV))
-wilcox.pval <- wilcox.test(v_distances$Distance_MomV ~ v_distances$Delivery_Vvaginal_Ccs_IcsInoc)$p.value
-
-dist_mom <- ggplot(v_distances, aes(x=Delivery_Vvaginal_Ccs_IcsInoc, y=Distance_MomV, fill=Delivery_Vvaginal_Ccs_IcsInoc)) +
-  geom_boxplot(outlier.shape = NA) +
-  geom_jitter(position=position_jitter(0.1), shape=1, size=1) +
-  labs(y="Distance to Mom", x="Birth Mode") +
-  theme_cowplot(font_size=7) +
-  annotate("text", x="V", y=1.2, label= paste("(wilcox)P=", round(wilcox.pval, digits=3)), size=2) +
-  scale_fill_manual(values=c("#c3c823", "#053d58")) +
-  guides(fill=FALSE)
-
-together <- plot_grid(current_plot, dist_mom, ncol=2, labels="auto", label_size = 12)
-
-pdf(paste(main_fp, "/Figure4.pdf", sep=""), width=3.34, height=2)
-plot(together)
+pdf(paste(main_fp, "/Figure4.pdf", sep="/"), height=1, width=3.5)
+plot(alpha_time)
 dev.off()

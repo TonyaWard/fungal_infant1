@@ -1,6 +1,6 @@
 # Make Supplemental Tables
 ######################################################################
-#Predominant taxa by sample type
+#Predominant (highest mean RA) taxa by sample type
 sites <- list(Skin, Oral, Anal_B, Anal_M, Vagina)
 names(sites) <- c("Skin", "Oral", "Anal_B", "Anal_M", "Vagina")
 for(s in 1:length(sites)){
@@ -8,10 +8,33 @@ for(s in 1:length(sites)){
   table_now <- taxa_table[,site]
   table_now$mean <- rowMeans(table_now)
   table_now2 <- table_now[with(table_now, order(-mean)),]
-  file_name <- paste(names(sites)[s], ".txt", sep="")
-  write.table(table_now2[1:5, "mean", drop=F], file_name, sep="\t", quote=F, row.names = T)
+  file_name <- paste(main_fp, "/", "MeanRA_", names(sites)[s], ".txt", sep="")
+  write.table(table_now2[1:25, "mean", drop=F], file_name, sep="\t", quote=F, row.names = T)
 }
 
+#Most prevalent taxa by sample type
+sites <- list(Skin, Oral, Anal_B, Anal_M, Vagina)
+names(sites) <- c("Skin", "Oral", "Anal_B", "Anal_M", "Vagina")
+for(s in 1:length(sites)){
+  site <- sites[[s]]
+  table_now <- taxa_table[,site]
+  table_now$count <- rowSums(table_now > 0)
+  table_now2 <- table_now[with(table_now, order(-count)),]
+  file_name <- paste(main_fp, "/", "Prevalent_", names(sites)[s], ".txt", sep="")
+  write.table(table_now2[1:25, "count", drop=F], file_name, sep="\t", quote=F, row.names = T)
+}
+
+#what percent is Malassezia?
+site <- sites[[1]]
+table_now <- taxa_table[,site]
+table_now$mean <- rowMeans(table_now)
+table_now2 <- table_now[with(table_now, order(-mean)),]
+collapse_names <- str_split_fixed(rownames(table_now2), " ", 2)[,1]
+genera <- as.matrix(table_now2)
+rownames(genera) <- collapse_names
+genera2 <- aggregate(genera, by=list(rownames(genera)), FUN = sum)
+print("mean relative abundance of skin malassezia:")
+print(genera2[genera2$Group.1 =="Malassezia","mean"])
 ######################################################################
 #Sample info - each body site: min, mean, max sequence info, samples passing filter, samples dropped, #OTUs, #Taxa
 
@@ -38,12 +61,13 @@ qcs$ReadCnt <- qcs$ReadCnt/2
 qcs$SampID <- as.character(qcs$SampID)
 rownames(qcs) <- qcs$SampID
 
-#Subset to keep only samples in the meta data original --> no innoc/fec
+#Subset to keep only samples in the meta data original --> no innoc/fec in here (line 43)
 raws <- raws[rownames(meta_orginal),]
 qcs <- qcs[rownames(meta_orginal),]
 meta_orginal$raws <- raws$ReadCnt
 meta_orginal$qcs <- qcs$ReadCnt
 
+  
 #Raw reads
 raw_skin <- mean(meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Skin","raws"])
 raw_oral <- mean(meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Oral","raws"])
@@ -85,32 +109,34 @@ sd_analM <- sd(meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAur
 sd_vaginal <- sd(meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Vaginal" & meta_orginal$motherorbaby_M_B == "M","MapDepth"])
 
 #Number samples
-total_s <- nrow(meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Skin",])
-total_o <- nrow(meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Oral",])
-total_ab <- nrow(meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal" ,])
-total_am <- nrow(meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal",])
-total_v <- nrow(meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Vaginal",])
+meta_orginal$SampleID <- rownames(meta_orginal) <- paste(rownames(meta_orginal), "s", sep="_")
+total_s <- ncol(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Skin" & meta_orginal$motherorbaby_M_B == "B", "SampleID"]])
+total_o <- nncol(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Oral" & meta_orginal$motherorbaby_M_B == "B", "SampleID"]])
+total_ab <- ncol(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal" & meta_orginal$motherorbaby_M_B == "B", "SampleID"]])
+total_am <- ncol(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal" & meta_orginal$motherorbaby_M_B == "M", "SampleID"]])
+total_v <- ncol(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Vaginal" & meta_orginal$motherorbaby_M_B == "M", "SampleID"]])
 
 #Number dropped
-below_50s <- nrow(meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Skin" & meta_orginal$MapDepth < 50,])
-below_50o <- nrow(meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Oral" & meta_orginal$MapDepth < 50,])
-below_50ab <- nrow(meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal" & meta_orginal$MapDepth < 50 & meta_orginal$motherorbaby_M_B == "B",])
-below_50am <- nrow(meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal" & meta_orginal$MapDepth < 50 & meta_orginal$motherorbaby_M_B == "M",])
-below_50v <- nrow(meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Vaginal" & meta_orginal$MapDepth < 50,])
+below_50s <- length(which(colSums(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Vaginal", "SampleID"]]) < 50 ))
+below_50o <- length(which(colSums(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Oral", "SampleID"]]) < 50 ))
+below_50ab <- length(which(colSums(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal" & meta_orginal$motherorbaby_M_B == "M", "SampleID"]]) < 50 ))
+below_50am <- length(which(colSums(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal" & meta_orginal$motherorbaby_M_B == "M", "SampleID"]]) < 50 ))
+below_50v <- length(which(colSums(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Vaginal", "SampleID"]]) < 50 ))
 
 #Number OTUs
 mapping$nOTUs <- as.numeric(as.character(mapping$nOTUs))
-nOTUs_skin <- mean(mapping[mapping$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Skin", "nOTUs"])
-nOTUs_oral <- mean(mapping[mapping$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Oral", "nOTUs"])
-nOTUs_analB <- mean(mapping[mapping$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal" & mapping$motherorbaby_M_B=="B", "nOTUs"])
-nOTUs_analM <- mean(mapping[mapping$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal" & mapping$motherorbaby_M_B== "M", "nOTUs"])
-nOTUs_Vagina <- mean(mapping[mapping$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Vaginal", "nOTUs"])
+mean(colSums(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Vaginal", "SampleID"]] > 0))
+nOTUs_skin <- mean(colSums(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Skin" & meta_orginal$motherorbaby_M_B == "B", "SampleID"]] > 0))
+nOTUs_oral <- mean(colSums(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Oral" & meta_orginal$motherorbaby_M_B == "B", "SampleID"]] > 0))
+nOTUs_analB <- mean(colSums(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal" & meta_orginal$motherorbaby_M_B == "B", "SampleID"]] > 0))
+nOTUs_analM <- mean(colSums(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal" & meta_orginal$motherorbaby_M_B == "M", "SampleID"]] > 0))
+nOTUs_Vagina <- mean(colSums(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Vaginal", "SampleID"]] > 0))
 
-sd_otus <- sd(mapping[mapping$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Skin", "nOTUs"])
-sd_otuo <- sd(mapping[mapping$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Oral", "nOTUs"])
-sd_otuab <- sd(mapping[mapping$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal" & mapping$motherorbaby_M_B=="B", "nOTUs"])
-sd_otuam <- sd(mapping[mapping$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal" & mapping$motherorbaby_M_B== "M", "nOTUs"])
-sd_otuv <- sd(mapping[mapping$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Vaginal", "nOTUs"])
+sd_otus <- sd(colSums(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Skin" & meta_orginal$motherorbaby_M_B == "B", "SampleID"]] > 0))
+sd_otuo <- sd(colSums(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Oral" & meta_orginal$motherorbaby_M_B == "B", "SampleID"]] > 0))
+sd_otuab <- sd(colSums(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal" & meta_orginal$motherorbaby_M_B == "B", "SampleID"]] > 0))
+sd_otuam <- sd(colSums(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal" & meta_orginal$motherorbaby_M_B == "M", "SampleID"]] > 0))
+sd_otuv <- sd(colSums(otutable[,meta_orginal[meta_orginal$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Vaginal", "SampleID"]] > 0))
 
 #Number Taxa
 mapping$nTaxa <- as.numeric(as.character(mapping$nTaxa))

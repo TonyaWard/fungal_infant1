@@ -1,6 +1,5 @@
 ##Making Figure 1
-#PCoA of Bodysites
-#Taxa Summaries and Lengend
+#PCoA of Bodysites, and colored by Candida spp. and boxplots of RA
 
 ######################################################################
 #Make PCOA of all infants colored by bodysite (from the PCOA.r script)
@@ -65,76 +64,86 @@ PC2_boxes <- ggplot(PCOA) +
   labs(x ="") +
   theme(axis.text.x = element_text(color=NA))
 
-#########WORKING HERE
+#Compile the PCoA and boxes
 
 top2 <- plot_grid(PC2_boxes, body_PCOA, ncol=2, rel_widths=c(0.3, 1))
 bottom2 <- plot_grid(NULL, PC1_boxes, ncol=2, rel_widths=c(0.3, 1))
 together2 <- plot_grid(top2, bottom2, nrow=2, rel_heights=c(1, 0.3))
 
 ######################################################################
-#Make Taxa Summaries by bodysite
+#For the sample PCoA, color by relative abundance of Candida spp.
+#These are significant gradients pulled out of the earlier 
+#exhaustive analysis
 
-b_bodysite <- c(Skin, Oral, Anal_B)
-otu <- make_taxa_sums(taxa_table, b_bodysite)
-otu$SuperbodysiteOralSkinNoseVaginaAnalsAureola <- factor(otu$SuperbodysiteOralSkinNoseVaginaAnalsAureola, levels=c("Skin", "Oral", "Anal"))
-
-taxa_plot <- ggplot(otu, aes_string(x = "SampleID", y = "Relative_Abundance", fill="Taxa")) + 
-  geom_bar(stat="identity", position="fill") +
-  facet_wrap(facets=~SuperbodysiteOralSkinNoseVaginaAnalsAureola, scales = "free_x") +
-  guides(fill=FALSE) +
+PCOA$Candida_albicans <- as.numeric(PCOA$Candida_albicans)
+albicans_PCOA <- ggplot(PCOA) +
+  geom_point(size = 1.5, alpha=0.65, aes_string(x = "PC1", y = "PC2", color = "Candida_albicans")) + 
+  scale_color_gradient(low="#f49f3f", high= "#3f1f6b", guide="colorbar") +
   theme_cowplot(font_size = 7) +
-  scale_fill_manual(name= names(taxa_cols), values= taxa_cols)+
-  labs(y="Relative Abundance", x='')+
-  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+  guides(color=F)
 
-#Make separate legend
-legend <- ggplot(otu, aes_string(x = "SampleID", y = "Relative_Abundance", fill="Taxa")) + 
-  geom_bar(stat="identity", position="fill") +
-  facet_wrap(facets=~SuperbodysiteOralSkinNoseVaginaAnalsAureola, scales = "free_x") +
-  theme_bw() +
-  guides(fill=guide_legend(ncol=3))  +
+PCOA$Candida_parapsilosis <- as.numeric(PCOA$Candida_parapsilosis)
+parap_PCOA <- ggplot(PCOA) +
+  geom_point(size = 1.5, alpha=0.85, aes_string(x = "PC1", y = "PC2", color = "Candida_parapsilosis")) + 
+  scale_color_gradient(low="#f49f3f", high= "#3f1f6b", guide="colorbar") +
   theme_cowplot(font_size = 7) +
-  scale_fill_manual(name= names(taxa_cols), values= taxa_cols)+
-  theme(legend.title = element_blank())
-g <- ggplotGrob(legend)$grobs
-legend2 <- g[[which(sapply(g, function(x) x$name) == "guide-box")]]
+  guides(color=F)
+
+#Print with legend and add this later
+forlegend <- ggplot(PCOA) +
+  geom_point(size = 1.5, alpha=0.85, aes_string(x = "PC1", y = "PC2", color = "Candida_parapsilosis")) + 
+  scale_color_gradient(low="#f49f3f", high= "#3f1f6b", guide="colorbar") +
+  theme_cowplot(font_size = 7)
+pdf(paste(main_fp, "/Fig1_grad_legend.pdf", sep=""), height=6, width=6.69)
+print(forlegend)
+dev.off()
+
+taxa_pcoas <- plot_grid(albicans_PCOA, parap_PCOA, ncol=2)
+
 ######################################################################
-#Alpha Div by body site 
+#Add body site diff taxa
+kids <- c(Bodysites_B[[1]], Bodysites_B[[2]], Bodysites_B[[3]])
+test_table <- taxa_table[, kids]
+test_table <- test_table[rowSums(test_table) > 0,]
+test_table <- test_table[rowSums(test_table > 0 )/ncol(test_table) > 0.1, ]
+map_test <- mapping[colnames(test_table),]
+map_test$SuperbodysiteOralSkinNoseVaginaAnalsAureola <- factor(map_test$SuperbodysiteOralSkinNoseVaginaAnalsAureola, levels=c("Skin", "Oral", "Anal"))
+working_table <- data.frame(t(test_table))
 
-working_table <- rbind(alpha_skin, alpha_anal)
-working_table <- rbind(alpha_oral, working_table)
-working_table$SuperbodysiteOralSkinNoseVaginaAnalsAureola <- factor(working_table$SuperbodysiteOralSkinNoseVaginaAnalsAureola, levels=c("Skin", "Oral", "Anal"))
-
-body_plot <- ggplot(working_table, aes_string(x="SuperbodysiteOralSkinNoseVaginaAnalsAureola", y="observed_species", fill="SuperbodysiteOralSkinNoseVaginaAnalsAureola")) +
+taxon1 <- ggplot(working_table, aes(y=working_table[,"Candida.albicans"], x=map_test$SuperbodysiteOralSkinNoseVaginaAnalsAureola, fill=map_test$SuperbodysiteOralSkinNoseVaginaAnalsAureola)) +
   geom_boxplot(outlier.shape = NA) +
   geom_jitter(position=position_jitter(0.1), shape=1, size=1) +
   theme(legend.position = 'bottom') + 
   theme_cowplot(font_size = 7) +
-  labs(x="") +
+  labs(x="", y = "C. albicans Relative Abundance") +
   guides(fill=F) +
   scale_fill_manual(values=body_cols)
 
+taxon2 <- ggplot(working_table, aes(y=working_table[,"Candida.parapsilosis"], x=map_test$SuperbodysiteOralSkinNoseVaginaAnalsAureola, fill=map_test$SuperbodysiteOralSkinNoseVaginaAnalsAureola)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(position=position_jitter(0.1), shape=1, size=1) +
+  theme(legend.position = 'bottom') + 
+  theme_cowplot(font_size = 7) +
+  guides(fill=F) +
+  labs(x="", y = "C. parapsilosis Relative Abundance") +
+  scale_fill_manual(values=body_cols)
+
+boxes <- plot_grid(taxon1,taxon2, ncol=2)
+
+taxa_together <- plot_grid(taxa_pcoas, boxes, nrow=2)
 ######################################################################
-#Compile Figure 1
-#Legend must be added after becuase it behaves weird with plot_grid
+#Compile Figure
+
+right_side <- plot_grid(albicans_PCOA, taxon1, taxon2, body_plot, ncol=3)
+right_side2 <- plot_grid(right_side, NULL, nrow=2, rel_heights = c(0.85, 0.15))
 
 fig1 <- ggdraw() +
-  #draw_plot(together2, 0, 0.5, 0.5, 0.5) +
-  draw_plot(PC2_boxes, 0, 0.7, 0.12, 0.3) +
-  draw_plot(PC1_boxes, 0.08, 0.6, 0.3, 0.12)+
-  draw_plot(body_PCOA, 0.08, 0.7, 0.3,0.3) +
-  draw_plot(body_plot, 0.40, 0.75, 0.60, 0.2) +
-  draw_plot(taxa_plot, 0, 0, 1, 0.6) +
-  draw_plot_label(c("a", "b"), c(0, 0), c(1, 0.6), size = 15)
+  draw_plot(PC2_boxes, 0, 0.2, 0.12, 0.75) +
+  draw_plot(PC1_boxes, 0.08, 0.0, 0.4, 0.2)+
+  draw_plot(body_PCOA, 0.08, 0.2, 0.4, 0.75) +
+  draw_plot(taxa_together, 0.5, 0, 0.5, 0.95) +
+  draw_plot_label(c("a", "b", "c", "d", "e"), c(0,0.5,0.75,0.5,0.75), c(1,1,1,0.6,0.6), size = 12)
 
-top <- plot_grid(together2, body_plot, NULL, ncol=3, rel_widths = c(0.33,0.33,0.33))
-
-together <- plot_grid(top, taxa_plot, nrow=2, rel_heights = c(1,1), labels="auto", label_size = 12)
-
-pdf(paste(main_fp, "/Figure1.pdf", sep=""), width=6.69, height=6)
-plot(fig1)
-dev.off()
-
-pdf(paste(main_fp, "/Figure1_Legend.pdf", sep=""), height=6, width=6.69)
-print(grid.arrange(legend2))
+pdf(paste(main_fp, "/Figure1.pdf", sep=""), height=3.3, width=6.6)
+print(fig1)
 dev.off()

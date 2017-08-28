@@ -33,14 +33,15 @@ otu_fp <- paste(data_dir, "ninja_otutable_newCut_meta2.biom", sep='')
 #otu table is OTU ID (rows) x sample ID (columns)
 #dimensions = 260 samples and  232 otus
 otutable <- as.matrix(biom_data(read_biom(otu_fp)))
+colnames(otutable) <- gsub(".R1", "", colnames(otutable))
 colnames(otutable) <- paste(colnames(otutable), "s", sep="_")
 
+##only for option 2
 #metadata is samples (rows) x metadata category (columns) (324 samples)
 metadata <- sample_metadata(read_biom(otu_fp))
-write.table(metadata, paste(data_dir, "map.txt", sep=""), quote=FALSE, sep="\t",col.names=NA)
+#write.table(metadata, paste(data_dir, "map.txt", sep=""), quote=FALSE, sep="\t",col.names=NA)
 rownames(metadata) <- paste(rownames(metadata), "s", sep="_")
 metadata$SampleID <- as.character(rownames(metadata))
-
 #taxonomy is OTU_ID by taxonomy level
 taxonomy <- observation_metadata(read_biom(otu_fp))
 taxonomy$taxonomy7 <- sapply(strsplit(taxonomy$taxonomy7, split='__', fixed=TRUE), function(x) (x[2]))
@@ -50,12 +51,17 @@ taxonomy$taxonomy7 <- sapply(strsplit(taxonomy$taxonomy7, split='__', fixed=TRUE
 #load source tracker otu table
 #st_otu <- t(read.table("data/Unknown_contributions.txt", sep="\t", header=TRUE, comment='', row.names=1))
 
+# metadata <- read.table(map_fp, sep='\t', header=T, check.names = F, comment='')
+# colnames(metadata)[1] <- "sample_id"
+# rownames(metadata) <- paste(metadata$sample_id, "s", sep="_")
+# metadata$sample_id <- rownames(metadata)
+
 ######################################################################
 ##Filter and normalize - (for option 2 only)
 #Filter to keep samples that have a minimum of 50 counts
-#keep singletons that occur only in more than one sample (232 to 142)
+#keep singletons that occur only in more than one sample #option2:(232 to 142)
 otutable1 <- otutable[rowSums(otutable > 0) > 1,]
-##keep samples with at least 50 sequence counts (324 to 279), and
+##keep samples with at least 50 sequence counts (option 2: 324 to 279)
 otutable2 <- otutable1[,colSums(otutable1) > 50]
 
 ##convert to relative abundance
@@ -72,7 +78,7 @@ new_names <- rownames(otutable_output)
 rownames(otutable_output) <- str_replace_all(new_names,"_"," ")
 
 #Write file to output
-sink("data/fungal_RA_wholenum.txt")
+sink("data/fungal_RA_wholenum.txt") #option2
 # sink("data/fungal_norm_wholenum.txt") #option 1 only
 cat("#OTUID")
 write.table(otutable_output, 
@@ -98,12 +104,13 @@ ids_keep <- intersect(rownames(metadata), colnames(otutable_RA))
 # ids_keep <- intersect(rownames(metadata), colnames(otutable)) ##For option 2
 mapping <- metadata[ids_keep,]
 
+##OPTION 2 ONLY
 ####Add taxonomy at species level to OTU table####
 t_table <- otutable_RA
-# t_table <- otutable #opton 1 only
+# # t_table <- otutable #opton 1 only
 taxonomy2 <- taxonomy[intersect(rownames(taxonomy), rownames(t_table)),]
 rownames(t_table) <- taxonomy2$taxonomy7
-
+# 
 #Collapse same taxonomies (from 142 to 123)
 #If option 1  - it goes from 232 to 189
 taxa_table <- aggregate(t_table[,1:ncol(t_table)], by=list(rownames(t_table)), FUN = sum)
@@ -112,15 +119,15 @@ taxa_table <- taxa_table[,2:ncol(taxa_table)] #Taxa table is 123 otus x 277 samp
 mapping$nTaxa <- as.factor(colSums(taxa_table > 0))
 mapping$nOTUs <- as.factor(colSums(otutable_counts > 0))
 #mapping$nOTUs <- as.factor(colSums(otutable > 0)) #option 1 only
-
+# 
 #Collapse taxa by correlation
 #move forward with this collapsed taxa table (it replaces taxa_table and otutable_counts with a new versions)
-
+# 
 #took out those with a .95 correlation
 source('bin/corr.network.r')
 #If option 1: new otutable = 190 OTUs, taxa_table = 163 taxa
-#If option 2: new otutable = 110 OTUs, taxa_table = 96 taxa
-
+#If option 2: new otutable: start = 142, end = 110 OTUs, taxa_table: start = 123 taxa, end = 96 taxa
+# 
 ####Add taxonomy for control table####
 taxonomy3 <- taxonomy[intersect(rownames(taxonomy), rownames(control_table)),]
 rownames(control_table) <- taxonomy3$taxonomy7
@@ -137,11 +144,14 @@ control_taxa <- control_taxa[rowSums(control_taxa) > 0,] #There are 18 taxa in t
 ##Generate alpha and beta diveristy and load them
 #Change the output otu table to biom from command line
 #with qiime/1.9.0
+#option 3 (RA)
+# biom convert  -i fungal_denovo_RA_wholenum.txt -o fungal_denovo_RA_wholenum.biom --to-json --table-type "OTU table"
 #option 2 (RA)
 # biom convert -i fungal_RA_wholenum.txt -o fungal_RA_wholenum.biom --to-json --table-type "OTU table"
 #option 1 (DeSeq2)
 # biom convert -i fungal_norm_wholenum.txt -o fungal_norm_wholenum.biom --to-json --table-type "OTU table"
 
+#option closed ref
 #use the get_otus_from_ghost_tree.py script (mod the path to the tree you care about)
 #the tree we want to use is the 0116_s/dynamic_100_ghost_tree tree
 # python get_otus_from_ghost_tree.py
@@ -156,15 +166,18 @@ control_taxa <- control_taxa[rowSums(control_taxa) > 0,] #There are 18 taxa in t
 # filter_otus_from_otu_table.py -i fungal_norm_wholenum.biom -o fungal_trimmed_norm_wholenum.biom -e ghost_tree_tips_underscore_fix.txt --negate_ids_to_exclude
 
 #run Beta with trimmed output
+# beta_diversity.py -i fungal_denovo_RA_wholenum.biom -o MG_Fungal_Beta_denovo -m bray_curtis
 # beta_diversity.py -i fungal_trimmed_RA_wholenum.biom -o MG_Fungal_Beta -m bray_curtis,unifrac,weighted_unifrac -t ghost_tree.nwk
 # beta_diversity.py -i fungal_trimmed_norm_wholenum.biom -o MG_Fungal_Beta_norm -m bray_curtis,unifrac,weighted_unifrac -t ghost_tree.nwk
 
 #run alpha with trimmed output
+# alpha_diversity.py -i fungal_denovo_RA_wholenum.biom -o MG_Fungal_Alpha_denovo.txt -m shannon,simpson,observed_species
 # alpha_diversity.py -i fungal_trimmed_RA_wholenum.biom -o MG_Fungal_Alpha.txt -m shannon,simpson,observed_species,PD_whole_tree -t ghost_tree.nwk
 # alpha_diversity.py -i fungal_trimmed_norm_wholenum.biom -o MG_Fungal_Alpha_norm.txt -m shannon,simpson,observed_species,PD_whole_tree -t ghost_tree.nwk
 
 #Transfer these to the data/ directory
-#Option 2 (RA)
+
+# #Option 2 (RA)
 alpha <- read.table("data/MG_Fungal_Alpha.txt",
                     sep='\t',
                     header=T,
@@ -213,11 +226,11 @@ Innoc <- rownames(mapping[mapping$Delivery_Vvaginal_Ccs_IcsInoc == "I",])
 mapping <- mapping[!rownames(mapping) %in% Innoc,] #258 to 209 samples
 otutable_RA<- otutable_RA[,rownames(mapping)]
 #otutable <- otutable[,rownames(mapping)]
-taxa_table <- taxa_table[,rownames(mapping)]
+#taxa_table <- taxa_table[,rownames(mapping)]
 alpha <- alpha[rownames(mapping),]
 bray <- bray[rownames(mapping), rownames(mapping)]
-unifrac <- unifrac[rownames(mapping), rownames(mapping)]
-wunifrac <- wunifrac[rownames(mapping), rownames(mapping)]
+#unifrac <- unifrac[rownames(mapping), rownames(mapping)]
+#wunifrac <- wunifrac[rownames(mapping), rownames(mapping)]
 
 #Store bodysites
 Skin <- rownames(mapping[mapping$SuperbodysiteOralSkinNoseVaginaAnalsAureola =="Skin",])
@@ -299,6 +312,7 @@ names(D_Mode) <- c("Vaginal", "Csection")
 
 ####Add Taxa quantiles to mapping###
 ranges <- c(0, 0.001, 0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
+taxa_table <- taxa_table[,rownames(mapping)]
 rownames(taxa_table) <- gsub("-", "_", rownames(taxa_table))
 mapping <- cbind(mapping, t(taxa_table))
 taxa <- colnames(t(taxa_table))
