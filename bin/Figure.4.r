@@ -32,10 +32,10 @@ for(t in 1:length(alpha_tissues)){
   colnames(working_alpha)[6] <- alpha_metric
   
   ##linear regression accounting for subject
-  #fm2 <- lme(shannon ~ Collection_Day, data=working_alpha, random= ~ 1 | subject_id)
+  fm2 <- lme(shannon ~ Collection_Day, data=working_alpha, random= ~ 1 | subject_id)
   #fm1 <- lme(shannon ~ Collection_Day, data=working_alpha, random= ~ Collection_Day | subject_id)
   #anova(fm2, fm1) #use fm2 based on anova
-  #r_sq <- fm2$coefficients["fixed"][[1]][[2]]
+  r_sq <- fm2$coefficients["fixed"][[1]][[2]]
   #pval <- data.frame(coef(summary(fm2)))[2,"p.value"]
   
   ##Permuation based test to see if different from random
@@ -55,7 +55,7 @@ for(t in 1:length(alpha_tissues)){
     geom_smooth(method=lm, se=FALSE, color="#99897E", linetype = "dashed", size=0.5)+
     guides(fill=FALSE)+
     annotate("text", x=25, y=3.25, label= paste("P=", round(pval, digits=3)), size=1) +
-    #annotate("text", x=25, y=3, label= paste("R2=", round(r_sq, digits=3)), size=2) +
+    annotate("text", x=25, y=3.5, label= paste("R2=", round(r_sq, digits=3)), size=1) +
     labs(x="Day", y=alpha_metric )+
     expand_limits(y=c(min_a,max_a)) +
     scale_y_continuous(labels=scaleFUN)

@@ -9,6 +9,7 @@
 beta_table <- wunifrac
 beta_subset <- beta_table[babies,babies]
 PCOA <- pcoa(beta_subset)$vectors
+var_exp <- pcoa(beta_subset)$values
 map2 <- mapping[babies,]
 #Run stats for diff. centroids
 beta_dist = as.dist(beta_subset)
@@ -53,7 +54,7 @@ PC1_boxes <- ggplot(PCOA) +
   theme_cowplot(font_size = 7) +
   guides(fill=F)+
   coord_flip() +
-  labs(x="")
+  labs(x="", y= paste("PC1 (", round(var_exp$Rel_corr_eig[1], digits=3)*100, "%)", sep=""))
 
 
 PC2_boxes <- ggplot(PCOA) +
@@ -61,7 +62,7 @@ PC2_boxes <- ggplot(PCOA) +
   scale_fill_manual(values=body_cols2) +
   theme_cowplot(font_size = 7) +
   guides(fill=F) +
-  labs(x ="") +
+  labs(x ="",  y= paste("PC2 (", round(var_exp$Rel_corr_eig[2], digits=3)*100, "%)", sep="")) +
   theme(axis.text.x = element_text(color=NA))
 
 #Compile the PCoA and boxes
@@ -77,15 +78,17 @@ together2 <- plot_grid(top2, bottom2, nrow=2, rel_heights=c(1, 0.3))
 
 PCOA$Candida_albicans <- as.numeric(PCOA$Candida_albicans)
 albicans_PCOA <- ggplot(PCOA) +
-  geom_point(size = 1.5, alpha=0.65, aes_string(x = "PC1", y = "PC2", color = "Candida_albicans")) + 
+  geom_point(size = 1.5, alpha=0.85, aes(x = PC1, y = PC2, color = Candida_albicans)) + 
   scale_color_gradient(low="#f49f3f", high= "#3f1f6b", guide="colorbar") +
+  geom_point(data= PCOA[PCOA$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal",], alpha=0.55, size = 1.5, pch=21, aes(x = PC1, y = PC2)) + 
   theme_cowplot(font_size = 7) +
   guides(color=F)
 
 PCOA$Candida_parapsilosis <- as.numeric(PCOA$Candida_parapsilosis)
 parap_PCOA <- ggplot(PCOA) +
-  geom_point(size = 1.5, alpha=0.85, aes_string(x = "PC1", y = "PC2", color = "Candida_parapsilosis")) + 
+  geom_point(size = 1.5, alpha=0.85, aes(x = PC1, y = PC2, color = Candida_parapsilosis)) +
   scale_color_gradient(low="#f49f3f", high= "#3f1f6b", guide="colorbar") +
+  geom_point(data= PCOA[PCOA$SuperbodysiteOralSkinNoseVaginaAnalsAureola == "Anal",], alpha=0.55, size = 1.5, pch=21, aes(x = PC1, y = PC2)) + 
   theme_cowplot(font_size = 7) +
   guides(color=F)
 

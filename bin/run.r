@@ -26,6 +26,8 @@ source("bin/Figure.4.r") #done
 
 source("bin/Figure.5.r") #done
 
+source("bin/SupFig3.r")  #done
+
 source("bin/SupFig4.r")  #done
 
 source("bin/taxa_otu_counts.r") #done

@@ -242,7 +242,7 @@ test_table <- taxa_table[, kids]
 test_table <- test_table[rowSums(test_table) > 0,]
 test_table <- test_table[rowSums(test_table > 0 )/ncol(test_table) > 0.1, ]
 
-for(i in 1:length(Infant)){
+for(i in 1:1){
   infants <- Infant
   for(j in 1:length(Days)){
     Day <- Days[j]
@@ -370,7 +370,7 @@ if(any(difftest$qvalues <= ALPHA)){
 
 diff_dir <- paste(main_fp, "diff_taxa/Body_Sites_gen/pairwise/", sep='/')
 #Pairwise
-for(i in 1:length(Infant)){
+for(i in 1:1){
   infants <- Infant
   union1 <- infants
     for(n in 1:(length(test.ixs)-1)){
